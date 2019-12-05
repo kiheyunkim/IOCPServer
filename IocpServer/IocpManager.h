@@ -1,7 +1,9 @@
 #ifndef _IOCPMANAGER_H_
 #define _IOCPMANAGER_H_
 
-class NetworkSession;
+#include "header.h"
+
+class ClientSession;
 enum class DisconnectReason;
 
 struct OverlappedAcceptContext;
@@ -17,19 +19,14 @@ private:
 	HANDLE						completionPortHandle;
 	int							ioThreadCount;
 	SOCKET						standbySocket;
-	std::vector<HANDLE>			threadsHandles;
-
-private:
-	std::size_t connectCount;
-	std::size_t standbyCount;
+	HANDLE*						threadHandles;
 
 private:
 	static unsigned int WINAPI IoWorkerThread(LPVOID lpParam);
-	static bool acceptCompletion(NetworkSession* session, OverlappedAcceptContext* context);
-	static bool connectCompletion(NetworkSession* session, OverlappedConnectContext* context);
-	static bool receiveCompletion(NetworkSession* session, OverlappedRecvContext* context, DWORD transferred);
-	static bool sendCompletion(NetworkSession* session, OverlappedSendContext* context, DWORD transferred);
-	static bool disconnectCompletion(NetworkSession* client, DisconnectReason dr);
+	static bool acceptCompletion(ClientSession* session, OverlappedAcceptContext* context);
+	static bool receiveCompletion(ClientSession* session, OverlappedRecvContext* context, DWORD transferred);
+	static bool sendCompletion(ClientSession* session, OverlappedSendContext* context, DWORD transferred);
+	static bool disconnectCompletion(ClientSession* client, DisconnectReason dr);
 
 public:
 	static char					acceptBuffer[64];
@@ -43,8 +40,6 @@ public:
 
 	bool InitializeIocp(unsigned short port);
 	bool StartIoThreads();
-	bool ConnectDBServer(const char* ipAddr, unsigned int port);
-	bool COnnectLoginServer(const char* ipAddr, unsigned int port);
 	bool StartAccept();
 	void CleanupIocp();
 
@@ -52,10 +47,6 @@ public:
 	inline HANDLE GetComletionPort()	{ return completionPortHandle; }
 	inline int	GetIoThreadCount()		{ return ioThreadCount; }
 	inline SOCKET* GetStandbySocket()	{ return &standbySocket; }
-	GameRoomManager* GetGameRoomMgr()	{ return gameRoomMgr; }
-
-public:
-	int GetMaxConnection() { return MAX_CONNECTION; }
 };
 
 extern IocpManager* iocpManager;

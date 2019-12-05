@@ -16,6 +16,9 @@
     <Filter Include="Server">
       <UniqueIdentifier>{82d655ed-de8c-42e0-b124-7471ca12321d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Synchronization">
+      <UniqueIdentifier>{a16eb771-bf13-4891-ac93-c37952ea77bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -46,6 +49,9 @@
     </ClInclude>
     <ClInclude Include="IOContext.h">
       <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CriticalSectionSync.h">
+      <Filter>Synchronization</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

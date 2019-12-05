@@ -1,20 +1,19 @@
-#include "stdafx.h"
-#include "Protocol.h"
-#include "NetworkSession.h"
-#include "SessionManager.h"
+#include "ClientSession.h"
 #include "IocpManager.h"
+#include "CriticalSectionSync.h"
+#include "SessionManager.h"
 
 
 SessionManager* sessionManager = nullptr;
 
-SessionManager::SessionManager() : currentIssueCount(0), currentReturnCount(0), freeSessionList(MAX_CONNECTION) {}
+SessionManager::SessionManager() : currentIssueCount(0), currentReturnCount(0) {}
 
 SessionManager::~SessionManager()
 {
-	while (!freeSessionList.isEmpty())
+	while (!freeSessionList.empty())
 	{
-		delete freeSessionList.GetFront();
-		freeSessionList.PopFront();
+		delete freeSessionList.back();
+		freeSessionList.pop_back();
 	}
 
 	for (auto it : sessionList)
@@ -23,39 +22,37 @@ SessionManager::~SessionManager()
 
 void SessionManager::PrepareSessions()
 {
-	CriticalSectionSync sync(cs);
+	CriticalSectionSync sync;
 
 	for (int i = 0; i < MAX_CONNECTION; ++i)
 	{
-		NetworkSession* client = new NetworkSession();
-		freeSessionList.PushBack(client);
+		ClientSession* client = new ClientSession();
+		freeSessionList.push_back(client);
 	}
-
-	sessionsReady = true;
  }
 
-void SessionManager::ReturnClientSession(NetworkSession* client)
+void SessionManager::ReturnClientSession(ClientSession* client)
 {
-	CriticalSectionSync sync(cs);
+	CriticalSectionSync sync;
 
-	assert(client->connected == 0 && client->refCount == 0);
+	//assert(client->connected == 0 && client->refCount == 0);
 	client->ResetSession();
-	freeSessionList.PushBack(client);
+	freeSessionList.push_back(client);
 	++currentReturnCount;
 }
 
 bool SessionManager::AcceptSessions()
 {
-	CriticalSectionSync sync(cs);
+	CriticalSectionSync sync;
 
 	while (currentIssueCount - currentReturnCount < MAX_CONNECTION)
 	{
-		NetworkSession* newClient = *freeSessionList.GetFront();
+		ClientSession* newClient = freeSessionList.front();
 
 		if (newClient->IsConnected()) 
 			return false;
 
-		freeSessionList.PopFront();
+		freeSessionList.pop_front();
 		++currentIssueCount;
 		newClient->AddRef();
 
@@ -66,32 +63,4 @@ bool SessionManager::AcceptSessions()
 	}
 
 	return true;
-}
-
-bool SessionManager::ConnectSession(const char* ipAddr, unsigned int port, SessionType type)
-{
-	CriticalSectionSync sync(cs);
-
-	NetworkSession* newClient = *freeSessionList.GetFront();
-
-	if (newClient->IsConnected())
-		return false;
-
-	newClient->ConvertToConnectionSession();
-
-	freeSessionList.PopFront();
-	++currentIssueCount;
-	newClient->AddRef();
-
-	if (false == newClient->Connect(ipAddr, port, type))
-		return false;
-
-	return true;
-}
-
-NetworkSession* SessionManager::GetSessionBySocket(SOCKET clientSocket)
-{
-	CriticalSectionSync sync(cs);
-
-	return sessionList.find(clientSocket) != sessionList.end() ? sessionList.find(clientSocket)->second : nullptr;
 }

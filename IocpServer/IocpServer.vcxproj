@@ -129,6 +129,7 @@
     <ClCompile Include="SessionManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CriticalSectionSync.h" />
     <ClInclude Include="header.h" />
     <ClInclude Include="IOContext.h" />
     <ClInclude Include="IocpManager.h" />

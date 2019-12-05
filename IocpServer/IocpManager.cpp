@@ -1,10 +1,8 @@
 #include "header.h"
-#include "GameRoomManager.h"
-#include "IocpManager.h"
-#include "Protocol.h"
-#include "NetworkSession.h"
+#include "ClientSession.h"
 #include "SessionManager.h"
-#include "Packet.h"
+#include "IOContext.h"
+#include "IocpManager.h"
 
 IocpManager* iocpManager = nullptr;
 
@@ -30,18 +28,18 @@ BOOL DisconnectEx(SOCKET socket, LPOVERLAPPED overlapped, DWORD flags, DWORD res
 	return IocpManager::fnDisconnectEx(socket, overlapped, flags, reserved);
 }
 
-IocpManager::IocpManager()
-	: completionPortHandle(nullptr), ioThreadCount(2), standbySocket(NULL),
-	connectCount(0), standbyCount(MAX_CONNECTION)
+IocpManager::IocpManager()	:
+	completionPortHandle(nullptr),
+	threadHandles(nullptr),
+	standbySocket(NULL),
+	ioThreadCount(0)
 {
-	gameRoomMgr = new GameRoomManager(MAX_ROOM);
-	gameRoomMgr->PrepareRooms();
 }
 
 IocpManager::~IocpManager() 
 {
-	gameRoomMgr->CleanUpRooms();
-	delete gameRoomMgr;
+	if (threadHandles != nullptr)
+		delete[] threadHandles;
 }
 
 bool IocpManager::InitializeIocp(unsigned short port)
@@ -50,6 +48,7 @@ bool IocpManager::InitializeIocp(unsigned short port)
 	SYSTEM_INFO systemInfo;
 	GetSystemInfo(&systemInfo);
 	ioThreadCount = static_cast<int>(systemInfo.dwNumberOfProcessors);
+	threadHandles = new HANDLE[ioThreadCount];
 
 	/// winsock initializing
 	WSADATA wsaData;
@@ -64,16 +63,18 @@ bool IocpManager::InitializeIocp(unsigned short port)
 	if (INVALID_SOCKET == (standbySocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED)))
 		return false;
 
+	//make Completion Port
 	if (completionPortHandle != CreateIoCompletionPort(reinterpret_cast<HANDLE>(standbySocket), completionPortHandle, 0, 0))
 	{
-		logManager->WriteLog("[DEBUG] listen socket IOCP register error: %d", GetLastError());
+		std::cout << "listen socket IOCP register error: " << GetLastError();
 		return false;
 	}
 
+	//set socket option : reuse Address
 	int opt{ 1 };
 	if (SOCKET_ERROR == (setsockopt(standbySocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&opt), sizeof(int))))
 	{
-		logManager->WriteLog("[DEBUG] setsockop() SO_REUSEADDR error: %d", GetLastError());
+		std::cout << "setsockop() SO_REUSEADDR error: " << GetLastError();
 		return false;
 	}
 
@@ -100,7 +101,7 @@ bool IocpManager::InitializeIocp(unsigned short port)
 	if (SOCKET_ERROR == WSAIoctl(standbySocket, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectExGuid, sizeof(GUID), &fnConnectEx, sizeof(LPFN_CONNECTEX), &bytes, nullptr, nullptr))
 		return false;
 
-	logManager->WriteLog("[DEBUG] Start IOCP Server");
+	std::cout << "Start IOCP Server" << "\n";
 
 	/// make session pool
 	sessionManager->PrepareSessions();
@@ -117,40 +118,7 @@ bool IocpManager::StartIoThreads()
 		if (threadHandle == nullptr)
 			return false;
 		else
-			threadsHandles.push_back(threadHandle);
-	}
-
-	return true;
-}
-
-bool IocpManager::ConnectDBServer(const char* ipAddr, unsigned int port)
-{
-	if (!sessionManager->GetReadyState())
-	{
-		logManager->WriteLog("sessions are Not Ready");
-		return false;
-	}
-
-	if (!sessionManager->ConnectSession(ipAddr, port, SessionType::SQL_SERVER))
-	{
-		logManager->WriteLog("DB Server-> %s:%d Connection Failed", ipAddr, port);
-		return false;
-	}
-
-	return true;
-}
-bool IocpManager::COnnectLoginServer(const char* ipAddr, unsigned int port)
-{
-	if (!sessionManager->GetReadyState())
-	{
-		logManager->WriteLog("sessions are Not Ready");
-		return false;
-	}
-
-	if (!sessionManager->ConnectSession(ipAddr, port, SessionType::LOGIN_SERVER))
-	{
-		logManager->WriteLog("DB Server-> %s:%d Connection Failed", ipAddr, port);
-		return false;
+			threadHandles[i] = threadHandle;
 	}
 
 	return true;
@@ -161,11 +129,14 @@ bool IocpManager::StartAccept()
 	/// listen
 	if (SOCKET_ERROR == listen(standbySocket, SOMAXCONN))
 	{
-		logManager->WriteLog("[DEBUG] listen error");
+		std::cout << "Listen Error\n";
 		return false;
 	}
 		
-	while (sessionManager->AcceptSessions()) { Sleep(100); }
+	while (sessionManager->AcceptSessions())	//Prevent Preemtion
+	{
+		Sleep(100); 
+	}
 
 	return true;
 }
@@ -175,12 +146,9 @@ void IocpManager::CleanupIocp()
 {
 	CloseHandle(completionPortHandle);
 
-	std::size_t threadCount{ threadsHandles.size() };
-	for (std::size_t i = 0; i < threadCount; i++)
-	{
-		CloseHandle(threadsHandles.back());
-		threadsHandles.pop_back();
-	}
+	int count = ioThreadCount;
+	for (register int i = 0; i < count; ++i)
+		CloseHandle(threadHandles[i]);
 
 	WSACleanup();
 }
@@ -188,18 +156,16 @@ void IocpManager::CleanupIocp()
 unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 {
 	HANDLE hComletionPort = iocpManager->GetComletionPort();
-	CriticalSection	criticalSection;
 
 	while (true)
 	{
-		criticalSection.Enter();		///CriticalSection Enter
 		DWORD transferred{ 0 };
 		OverlappedIOContext* context{ nullptr };
 		ULONG_PTR completionKey{ 0 };
 
 		int retval = GetQueuedCompletionStatus(hComletionPort, &transferred, &completionKey, reinterpret_cast<LPOVERLAPPED*>(&context), INFINITE);
 
-		NetworkSession* theSession = (context == nullptr) ? nullptr : context->sessionObject;
+		ClientSession* theSession = (context == nullptr) ? nullptr : context->sessionObject;
 		if (retval == 0 || transferred == 0)
 		{
 			if (GetLastError() == WAIT_TIMEOUT)
@@ -208,7 +174,7 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 			if (context->ioType == IOType::IO_RECV || context->ioType == IOType::IO_SEND )
 			{
 #if _DEBUG
-				assert(nullptr != theSession);
+				//assert(nullptr != theSession);
 #else
 				if (nullptr != theSession) exit(-1);
 #endif
@@ -221,10 +187,6 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 		bool completionOk{ false };
 		switch (context->ioType)
 		{
-		case IOType::IO_CONNECT:
-			completionOk = connectCompletion(theSession, static_cast<OverlappedConnectContext*>(context));
-			break;
-
 		case IOType::IO_ACCEPT:
 			completionOk = acceptCompletion(theSession, static_cast<OverlappedAcceptContext*>(context));
 			break;
@@ -242,8 +204,7 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 			break;
 
 		default:
-			assert(false);
-			logManager->WriteLog("Unknown I/O Type: %d", static_cast<int>(context->ioType));
+			std::cout << "Unknown I/O Type: " << static_cast<int>(context->ioType) << "\n";
 			break;
 		}
 
@@ -251,50 +212,41 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 			theSession->DisconnectRequest(DisconnectReason::DR_IO_REQUEST_ERROR);
 
 		DeleteIoContext(context);
-		criticalSection.Leave();			///CriticalSection Leave	
 	}
 
 	return 0;
 }
 
-bool IocpManager::acceptCompletion(NetworkSession* session, OverlappedAcceptContext* context)
+bool IocpManager::acceptCompletion(ClientSession* session, OverlappedAcceptContext* context)
 {
 	session->AcceptCompletion();
 
 	return session->PostSend();
 }
 
-bool IocpManager::connectCompletion(NetworkSession* session, OverlappedConnectContext* context)
+bool IocpManager::receiveCompletion(ClientSession* session, OverlappedRecvContext* context, DWORD transferred)
 {
-	session->ConnectCompletion();
+	session->RecvCompletion(transferred);
+
+	return session->PostSend();	/// echo back Request Result
+}
+
+bool IocpManager::sendCompletion(ClientSession* session, OverlappedSendContext* context, DWORD transferred)
+{
+	session->SendCompletion(transferred);
+
+	if (context->wsaBuf.len != transferred)
+	{
+		std::cout << "Partial SendCompletion requested [" << context->wsaBuf.len << "], sent [" << transferred << "]";
+		return false;
+	}
 
 	return session->PostRecv();
 }
 
-bool IocpManager::receiveCompletion(NetworkSession* client, OverlappedRecvContext* context, DWORD transferred)
+bool IocpManager::disconnectCompletion(ClientSession* session, DisconnectReason dr)
 {
-	client->RecvCompletion(transferred);
-
-	return client->PostSend();	/// echo back Request Result
-}
-
-bool IocpManager::sendCompletion(NetworkSession* client, OverlappedSendContext* context, DWORD transferred)
-{
-	client->SendCompletion(transferred);
-
-	if (context->wsaBuf.len != transferred)
-	{
-		logManager->WriteLog("Partial SendCompletion requested [%d], sent [%d]", context->wsaBuf.len, transferred);
-		return false;
-	}
-
-	return client->PostRecv();
-}
-
-bool IocpManager::disconnectCompletion(NetworkSession* client, DisconnectReason dr)
-{
-	client->ProcessForDisconnect();
-	client->DisconnectCompletion(dr);
+	session->DisconnectCompletion(dr);
 
 	return true;
 }

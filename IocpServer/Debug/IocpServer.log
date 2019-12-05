@@ -1,0 +1,13 @@
+﻿  IocpManager.cpp
+C:\Projects\IocpServer\IocpServer\IocpManager.h(59,6): error C2373: 'AcceptEx': 재정의. 형식 한정자가 다릅니다.
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um\MSWSock.h(179): message : 'AcceptEx' 선언을 참조하십시오.
+  ClientSession.cpp
+C:\Projects\IocpServer\IocpServer\SessionManager.h(4,10): fatal error C1083: 포함 파일을 열 수 없습니다. 'CriticalSection.h': No such file or directory
+C:\Projects\IocpServer\IocpServer\ClientSession.h(38,42): error C2061: 구문 오류: 식별자 'DisconnectReason'
+C:\Projects\IocpServer\IocpServer\ClientSession.h(39,45): error C2061: 구문 오류: 식별자 'DisconnectReason'
+C:\Projects\IocpServer\IocpServer\IocpManager.h(59,6): error C2373: 'AcceptEx': 재정의. 형식 한정자가 다릅니다.
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um\MSWSock.h(179): message : 'AcceptEx' 선언을 참조하십시오.
+  SessionManager.cpp
+C:\Projects\IocpServer\IocpServer\SessionManager.h(4,10): fatal error C1083: 포함 파일을 열 수 없습니다. 'CriticalSection.h': No such file or directory
+  코드를 생성하고 있습니다...
+C:\Projects\IocpServer\IocpServer\SessionManager.cpp(1,10): fatal error C1083: 포함 파일을 열 수 없습니다. 'stdafx.h': No such file or directory

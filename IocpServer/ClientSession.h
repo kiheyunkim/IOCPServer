@@ -1,11 +1,13 @@
 #ifndef _NETWORKSESSION_H_
 #define _NETWORKSESSION_H_
 
+#include "header.h"
+
+constexpr int bufferSize =  1024;
 
 class ClientSession;
 class SessionManager;
-
-
+enum class DisconnectReason;
 
 class ClientSession
 {
@@ -18,6 +20,10 @@ private:
 
 	volatile long	refCount;
 	volatile long	connected;
+
+private:
+	char sendBuffer[bufferSize];
+	char recvBuffer[bufferSize];
 
 public:
 	ClientSession();
@@ -43,8 +49,6 @@ public:
 
 	inline	void SetSocket(SOCKET sock) { sessionSocket = sock; }
 	inline	SOCKET GetSocket() const { return sessionSocket; }
-	
-	unsigned short GetPort();
 };
 
 #endif // !_NETWORKSESSION_H_
