@@ -13,5 +13,39 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{82d655ed-de8c-42e0-b124-7471ca12321d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientSession.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="IocpManager.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="SessionManager.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="header.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="IocpManager.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientSession.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="SessionManager.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="IOContext.h">
+      <Filter>Server</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
