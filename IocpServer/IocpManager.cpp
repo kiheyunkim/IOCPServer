@@ -178,7 +178,7 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 #else
 				if (nullptr != theSession) exit(-1);
 #endif
-				theSession->DisconnectRequest(DisconnectReason::DR_COMPLETION_ERROR);
+				theSession->PostDisconnect(DisconnectReason::DR_COMPLETION_ERROR);
 				DeleteIoContext(context);
 				continue;
 			}
@@ -209,7 +209,7 @@ unsigned int WINAPI IocpManager::IoWorkerThread(LPVOID lpParam)
 		}
 
 		if ( !completionOk )
-			theSession->DisconnectRequest(DisconnectReason::DR_IO_REQUEST_ERROR);
+			theSession->PostDisconnect(DisconnectReason::DR_IO_REQUEST_ERROR);
 
 		DeleteIoContext(context);
 	}

@@ -29,7 +29,7 @@ public:
 	ClientSession();
 	~ClientSession();
 
-	void	ResetSession();
+	bool	ResetSession();
 	bool	IsConnected() const { return !!connected; }
 
 	bool	PostAccept();
@@ -41,7 +41,7 @@ public:
 	bool	PostSend();
 	void	SendCompletion(DWORD transferred);
 
-	void	DisconnectRequest(DisconnectReason dr);
+	void	PostDisconnect(DisconnectReason dr);
 	void	DisconnectCompletion(DisconnectReason dr);
 
 	void	AddRef();
@@ -52,8 +52,3 @@ public:
 };
 
 #endif // !_NETWORKSESSION_H_
-
-
-
-
-

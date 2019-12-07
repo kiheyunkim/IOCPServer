@@ -16,26 +16,29 @@ ClientSession::ClientSession() :
 
 ClientSession::~ClientSession() {}
 
-void ClientSession::ResetSession()
+bool ClientSession::ResetSession()
 {
 	CriticalSectionSync sync;
 
 	connected = refCount = 0;
 	memset(&sessionAddress, 0, sizeof(SOCKADDR_IN));
 
-	LINGER lingerOption;
-	lingerOption.l_onoff = 1;
-	lingerOption.l_linger = 0;
-
-	/// no TCP TIME_WAIT
+	LINGER lingerOption{ 1,0 };	// no TCP TIME_WAIT
 	if (SOCKET_ERROR == setsockopt(sessionSocket, SOL_SOCKET, SO_LINGER, reinterpret_cast<char*>(&lingerOption), static_cast<int>(sizeof(LINGER))))
 	{
-		std::cout << "setsockopt linger option error : " << GetLastError() << "\n";
+		std::cout << "setsockopt() linger option error : " << GetLastError() << "\n";
+		return false;
 	}
 
 	closesocket(sessionSocket);
 
-	sessionSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (SOCKET_ERROR == (sessionSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED)))
+	{
+		std::cout << "WsaSocket() Error : " << GetLastError() << "\n";
+		return false;
+	}
+
+	return true;
 }
 
 bool ClientSession::PostAccept()
@@ -116,14 +119,14 @@ void ClientSession::AcceptCompletion()
 
 	if (!resultOk)
 	{
-		DisconnectRequest(DisconnectReason::DR_ONCONNECT_ERROR);
+		PostDisconnect(DisconnectReason::DR_ONCONNECT_ERROR);
 		return;
 	}
 
 	std::cout << "Client Connected IP=" << inet_ntoa(sessionAddress.sin_addr) << ", PORT=" << ntohs(sessionAddress.sin_port) << "\n";
 }
 
-void ClientSession::DisconnectRequest(DisconnectReason dr)
+void ClientSession::PostDisconnect(DisconnectReason dr)
 {
 	CriticalSectionSync sync;
 

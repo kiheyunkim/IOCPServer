@@ -16,23 +16,25 @@ struct OverlappedAcceptContext;
 class IocpManager
 {
 private:
+	static char					acceptBuffer[64];
+	static LPFN_ACCEPTEX		fnAcceptEx;
+	static LPFN_CONNECTEX		fnConnectEx;
+	static LPFN_DISCONNECTEX	fnDisconnectEx;
+
+private:
+	static unsigned int WINAPI IoWorkerThread(LPVOID lpParam);
+
+private:
 	HANDLE						completionPortHandle;
 	int							ioThreadCount;
 	SOCKET						standbySocket;
 	HANDLE*						threadHandles;
 
 private:
-	static unsigned int WINAPI IoWorkerThread(LPVOID lpParam);
 	static bool acceptCompletion(ClientSession* session, OverlappedAcceptContext* context);
 	static bool receiveCompletion(ClientSession* session, OverlappedRecvContext* context, DWORD transferred);
 	static bool sendCompletion(ClientSession* session, OverlappedSendContext* context, DWORD transferred);
 	static bool disconnectCompletion(ClientSession* client, DisconnectReason dr);
-
-public:
-	static char					acceptBuffer[64];
-	static LPFN_ACCEPTEX		fnAcceptEx;
-	static LPFN_CONNECTEX		fnConnectEx;
-	static LPFN_DISCONNECTEX	fnDisconnectEx;
 
 public:
 	IocpManager();

@@ -1,2 +1,17 @@
-﻿  IocpManager.cpp
-  IocpServer.vcxproj -> C:\Projects\IocpServer\x64\Debug\IocpServer.exe
+﻿  ClientSession.cpp
+C:\Projects\IocpServer\IocpServer\ClientSession.cpp(56,5): error C2248: 'IocpManager::acceptBuffer': private 멤버('IocpManager' 클래스에서 선언)에 액세스할 수 없습니다.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(19): message : 'IocpManager::acceptBuffer' 선언을 참조하십시오.
+  IocpManager.cpp
+C:\Projects\IocpServer\IocpServer\IocpManager.h(16): message : 'IocpManager' 선언을 참조하십시오.
+C:\Projects\IocpServer\IocpServer\IocpManager.cpp(17,32): error C2248: 'IocpManager::fnAcceptEx': private 멤버('IocpManager' 클래스에서 선언)에 액세스할 수 없습니다.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(20): message : 'IocpManager::fnAcceptEx' 선언을 참조하십시오.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(16): message : 'IocpManager' 선언을 참조하십시오.
+C:\Projects\IocpServer\IocpServer\IocpManager.cpp(23,33): error C2248: 'IocpManager::fnConnectEx': private 멤버('IocpManager' 클래스에서 선언)에 액세스할 수 없습니다.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(21): message : 'IocpManager::fnConnectEx' 선언을 참조하십시오.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(16): message : 'IocpManager' 선언을 참조하십시오.
+C:\Projects\IocpServer\IocpServer\IocpManager.cpp(28,36): error C2248: 'IocpManager::fnDisconnectEx': private 멤버('IocpManager' 클래스에서 선언)에 액세스할 수 없습니다.
+C:\Projects\IocpServer\IocpServer\IocpManager.h(22): message : 'IocpManager::fnDisconnectEx' 선언을 참조하십시오.
+  SessionManager.cpp
+  main.cpp
+  코드를 생성하고 있습니다...
+C:\Projects\IocpServer\IocpServer\IocpManager.h(16): message : 'IocpManager' 선언을 참조하십시오.
